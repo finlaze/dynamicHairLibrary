@@ -17,7 +17,7 @@
 	public dynamic class dynamicHairExtender extends flash.display.MovieClip {	
 		const modName:String = "dynamicHairExtender";
 		const modCreator:String = "stuntcock";
-		const modVersion:Number = 5.3;
+		const modVersion:Number = 5.4;
 		// The following are basic variables which will store fundamental pointers.
 		// They provide us with a "gateway" into SDT data.
 		var main;
@@ -54,11 +54,9 @@
 			g = l.g;
 			
 			// Check whether a newer (or equal) version is already loaded
-			
-			if (((l[modName] as Object) != null) && ((l[modName] as Object).modVersion as Number) < this.modVersion) {
+			if (((l[modName] as Object) != null) && (((l[modName] as Object).modVersion as Number) || 0.0) < this.modVersion) {
 				// Unload the previous version of the mod
-				l[modName] = null;
-				// TODO - ensure that the destructor gets invoked!  Deregister the proxies!
+				try { l[modName].doUnload(); } catch (myError:Error) { }
 			}
 			if ((l[modName] as Object) != null) {
 				// An equal-or-greater version of the mod is already loaded.  Do nothing.
@@ -91,7 +89,7 @@
 			try {
 				var addDynamicHairMod = (lProxy as Class).createProxy(g.customElementLoader, "addDynamicHairMod");
 				addDynamicHairMod.addPre(addDynamicHairMod_Pre, true);
-				addDynamicHairMod.hooked = false;
+				addDynamicHairMod.hooked = true;
 				main[modName] = this;
 			} catch (myError:Error) {
 				main.updateStatusCol("dynamicHairExtender Loading Error: " + myError.toString(),"#FF0000"); 
@@ -502,6 +500,10 @@
 				if (dynamicHairRope != undefined && dynamicHairRope.ropeGraphic != null) { ropeName = dynamicHairRope.ropeGraphic.name; }
 				main.updateStatusCol("Dynamic Hair Strand Initialization Error: " + ropeName + " " + myError.toString(),"#FF0000");
 			}
+			
+			// Finally, we must return a non-null value.  The Loader's lProxy mechanism will detect this,
+			// and it will refrain from invoking the proxied method (i.e. the vanilla hair-loading code).
+			return true;
 		}
 
 		// Functor wrapper.  Use with ADDPRE and ADDPOST calls, based on ModGuy's suggestion.
@@ -884,7 +886,7 @@
 		
 		function doUnload() {
 			try {
-				var constructorProxy = (lProxy as Class).checkProxied(g.customElementLoader, "addDynamicHairMod");
+				var constructorProxy = (lProxy as Class).createProxy(g.customElementLoader, "addDynamicHairMod");
 				constructorProxy.restoreProxy(true);
 				main[modName] = null;
 			} catch (myError:Error) { }
