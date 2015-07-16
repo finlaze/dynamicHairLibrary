@@ -17,7 +17,7 @@
 	public dynamic class dynamicHairExtender extends flash.display.MovieClip {	
 		const modName:String = "dynamicHairExtender";
 		const modCreator:String = "stuntcock";
-		const modVersion:Number = 5.4;
+		const modVersion:Number = 5.5;
 		// The following are basic variables which will store fundamental pointers.
 		// They provide us with a "gateway" into SDT data.
 		var main;
@@ -45,6 +45,7 @@
 		var AlphaRGBObject:Class;
 		var CharacterElementHelper:Class;
 		var LoadedMod:Class;
+		var CharacterControl:Class;
 		var i:int;
 
 		public function initl(l)			//boiler plate setup for getting settings started, put startup stuff here that are not dependent on loaded settings
@@ -77,6 +78,7 @@
 			LoadedMod = main.eDOM.getDefinition("obj.LoadedMod") as Class;
 			AlphaRGBObject = main.eDOM.getDefinition("obj.AlphaRGBObject") as Class;
 			CharacterElementHelper = main.eDOM.getDefinition("obj.CharacterElementHelper") as Class;
+			CharacterControl = main.eDOM.getDefinition("obj.CharacterControl") as Class;
 			
 			// Boilerplate
 			finishinit();
@@ -85,11 +87,34 @@
 
 		function finishinit()		//put startup stuff here that require loaded settings
 		{
+			// Proxy the RGB-shifting code in CharacterControl to fix a small (but fatal) bug in the tryToSetFillChildren function
+			var bugfixProxy = (lProxy as Class).checkProxied((CharacterControl as Class), "tryToSetFillChildren");
+			if (bugfixProxy) { bugfixProxy.removePre(tryToSetFillChildren_Fixed); }
+			var tryToSetFillChildren = (lProxy as Class).createProxy(CharacterControl, "tryToSetFillChildren");
+			tryToSetFillChildren.addPre(tryToSetFillChildren_Fixed, true);
+			tryToSetFillChildren.hooked = false;
+			
+			// The erroneous function is duplicated in the CharacterElementHelper class.  I'm -reasonably- certain that it doesn't get
+			// invoked normally, but we'll apply the fix just to be safe.
+			var cc = g.characterControl;	
+			var characterElementHelpers:Array = [cc.collarControl, cc.gagControl, cc.cuffsControl, cc.ankleCuffsControl, cc.eyewearControl, cc.pantiesControl,
+				cc.armwearControl, cc.legwearControl, cc.legwearBControl, cc.bottomsControl, cc.footwearControl, cc.topControl, cc.braControl, cc.tonguePiercingControl, 
+				cc.nipplePiercingControl, cc.bellyPiercingControl, cc.earringControl, cc.headwearControl];
+			characterElementHelpers.forEach(function(helper:Object, ...args):void {
+				helper["tryToSetFillChildren"] = CharacterControl["tryToSetFillChildren"];
+			});
+
+			// Proxy the breast-size method to resolve an intermittent bug in which RGB settings are lost during size changes
+			var setBreastCostumeSize_Post = dynamicHairLibrary.dynamicHairExtender.methodWrapper(applyBreastCostumeRGB, cc);
+			var setBreastCostumeSize = (lProxy as Class).checkProxied(cc, "setBreastCostumeSize");
+			if (setBreastCostumeSize) { setBreastCostumeSize.restoreProxy(true); }
+			setBreastCostumeSize = (lProxy as Class).createProxy(cc, "setBreastCostumeSize");
+			setBreastCostumeSize.addPost(setBreastCostumeSize_Post, true);
+			
 			// Proxy the Dynamic Hair registration function so that we can add non-standard parameters
 			try {
 				var addDynamicHairMod = (lProxy as Class).createProxy(g.customElementLoader, "addDynamicHairMod");
 				addDynamicHairMod.addPre(addDynamicHairMod_Pre, true);
-				addDynamicHairMod.hooked = true;
 				main[modName] = this;
 			} catch (myError:Error) {
 				main.updateStatusCol("dynamicHairExtender Loading Error: " + myError.toString(),"#FF0000"); 
@@ -112,6 +137,26 @@
 			// vvv The stuff below is boilerplate for SDT mods vvv
 			main.unloadMod();
 			main.registerUnloadFunction(doUnload);
+		}
+		
+		static function tryToSetFillChildren_Fixed (targetElement:MovieClip, targetName:String, ct:ColorTransform) {
+			for (var i:uint = 0; i < targetElement.numChildren; i++) {
+				if(targetElement.getChildAt(i).name == targetName)
+				{
+				   targetElement.getChildAt(i).transform.colorTransform = ct;
+				}
+				if(targetElement.getChildAt(i) is MovieClip)
+				{
+				   tryToSetFillChildren_Fixed(targetElement.getChildAt(i) as MovieClip,targetName,ct);
+				}
+			}
+		}
+		
+		static function applyBreastCostumeRGB(cc:Object):void {
+			cc.braControl.fillFunction(cc.braControl.rgb1, "rgbFill");
+			if (cc.braControl.rgb2) { cc.braControl.fillFunction(cc.braControl.rgb2, "rgbFill2"); }
+			cc.topControl.fillFunction(cc.topControl.rgb1, "rgbFill");
+			if (cc.topControl.rgb2) { cc.topControl.fillFunction(cc.braControl.rgb2, "rgbFill2"); }
 		}
 
 		// This entire function is copy-pasted from SDT decompilation.  It should not be modified unless you know
@@ -886,8 +931,8 @@
 		
 		function doUnload() {
 			try {
-				var constructorProxy = (lProxy as Class).createProxy(g.customElementLoader, "addDynamicHairMod");
-				constructorProxy.restoreProxy(true);
+				var constructorProxy = (lProxy as Class).checkProxied(g.customElementLoader, "addDynamicHairMod");
+				if (constructorProxy) { constructorProxy.removePre(addDynamicHairMod_Pre); }
 				main[modName] = null;
 			} catch (myError:Error) { }
 		}
