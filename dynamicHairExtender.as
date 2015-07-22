@@ -823,6 +823,40 @@
 			if (nextObject == null) { return null; }
 			return findObjectByPath(nextObject, remainingPath);
 		}
+		
+		public static function findDescendantsByName(targetElement:DisplayObjectContainer, targetName:String):Array {
+			// Base case
+			if (targetElement.name == targetName) { return [targetElement]; }
+
+			// Recursive case
+			var returnElements:Array = new Array();
+			for (var i:uint = 0; i<targetElement.numChildren; i++) {
+				if (!(targetElement.getChildAt(i) as DisplayObjectContainer)) {
+					// Child element is not eligible; skip it.
+					continue;
+				}
+				returnElements = returnElements.concat(findDescendantsByName((targetElement.getChildAt(i) as DisplayObjectContainer), targetName));
+			}
+			return returnElements;
+		}
+		
+		public static function removeFromDescendants(parentElement:DisplayObjectContainer, targetElement:DisplayObject, removeMask:Boolean = false):void {
+			if (parentElement.numChildren == 0) { return; }
+			for (var i:int = parentElement.numChildren - 1; i>=0; i--) {
+				if ((targetElement.mask) && (targetElement.mask == (parentElement.getChildAt(i) as DisplayObject))) {
+					// Base case 1
+					if (removeMask) {parentElement.removeChildAt(i); }
+				}
+				else if (targetElement == (parentElement.getChildAt(i) as DisplayObject)) {
+					// Base case 2
+					parentElement.removeChildAt(i);
+				}
+				else if (parentElement.getChildAt(i) as DisplayObjectContainer) {
+					// Recursive case
+					removeFromDescendants((parentElement.getChildAt(i) as DisplayObjectContainer), targetElement, removeMask);
+				}
+			}
+		}
 
 		function updateRopeGraphic_CustomParent(rope:Object) {
 			if (rope.segments.length == 0) { return; }
