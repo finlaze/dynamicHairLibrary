@@ -17,7 +17,7 @@
 	public dynamic class dynamicHairExtender extends flash.display.MovieClip {	
 		const modName:String = "dynamicHairExtender";
 		const modCreator:String = "stuntcock";
-		const modVersion:Number = 5.5;
+		const modVersion:Number = 5.6;
 		// The following are basic variables which will store fundamental pointers.
 		// They provide us with a "gateway" into SDT data.
 		var main;
@@ -140,6 +140,7 @@
 		}
 		
 		static function tryToSetFillChildren_Fixed (targetElement:MovieClip, targetName:String, ct:ColorTransform) {
+			if (targetElement.fillOverrides as Dictionary) { targetName = (targetElement.fillOverrides as Dictionary)[targetName] || targetName; }
 			for (var i:uint = 0; i < targetElement.numChildren; i++) {
 				if(targetElement.getChildAt(i).name == targetName)
 				{
@@ -839,24 +840,6 @@
 			}
 			return returnElements;
 		}
-		
-		public static function removeFromDescendants(parentElement:DisplayObjectContainer, targetElement:DisplayObject, removeMask:Boolean = false):void {
-			if (parentElement.numChildren == 0) { return; }
-			for (var i:int = parentElement.numChildren - 1; i>=0; i--) {
-				if ((targetElement.mask) && (targetElement.mask == (parentElement.getChildAt(i) as DisplayObject))) {
-					// Base case 1
-					if (removeMask) {parentElement.removeChildAt(i); }
-				}
-				else if (targetElement == (parentElement.getChildAt(i) as DisplayObject)) {
-					// Base case 2
-					parentElement.removeChildAt(i);
-				}
-				else if (parentElement.getChildAt(i) as DisplayObjectContainer) {
-					// Recursive case
-					removeFromDescendants((parentElement.getChildAt(i) as DisplayObjectContainer), targetElement, removeMask);
-				}
-			}
-		}
 
 		function updateRopeGraphic_CustomParent(rope:Object) {
 			if (rope.segments.length == 0) { return; }
@@ -920,6 +903,7 @@
 		function setFill_Rope(rope:Object, elementHelper:Object, argb:Object, targetName:String = "rgbFill") : void {
 			try { 
 				var argbTransform:ColorTransform = new ColorTransform(1,1,1,argb.a,argb.r,argb.g,argb.b);
+				if (rope.ropeGraphic.fillOverrides as Dictionary) { targetName = (rope.ropeGraphic.fillOverrides as Dictionary)[targetName] || targetName; }
 				elementHelper.tryToSetFillChildren(rope.ropeGraphic,targetName,argbTransform);
 			} catch (myError:Error) { }
 		}
