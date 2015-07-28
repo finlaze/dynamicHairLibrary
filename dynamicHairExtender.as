@@ -17,7 +17,7 @@
 	public dynamic class dynamicHairExtender extends flash.display.MovieClip {	
 		const modName:String = "dynamicHairExtender";
 		const modCreator:String = "stuntcock";
-		const modVersion:Number = 5.6;
+		const modVersion:Number = 5.7;
 		// The following are basic variables which will store fundamental pointers.
 		// They provide us with a "gateway" into SDT data.
 		var main;
@@ -823,7 +823,18 @@
 			var firstObjectName:String = dottedPath.substr(0, firstDotIndex);
 			var remainingPath:String = dottedPath.substr(firstDotIndex + 1);
 			var nextObject:Object = currentObject[firstObjectName];
-			if (nextObject == null) { nextObject = (currentObject as DisplayObjectContainer).getChildByName(firstObjectName); }
+			// Search through the Child elements in REVERSE ORDER
+			// This reverse-search is needed because early elements may be "derelicts" left behind by a bug in moreClothing
+			if (currentObject as DisplayObjectContainer) {
+				for (var i:int = (currentObject as DisplayObjectContainer).numChildren - 1; i >= 0; i--) {
+					if (((currentObject as DisplayObjectContainer).getChildAt(i) as DisplayObject).name == firstObjectName) {
+						nextObject = ((currentObject as DisplayObjectContainer).getChildAt(i) as DisplayObject);
+						break;
+					}
+				}
+			}
+
+			
 			if (nextObject == null) { return null; }
 			return findObjectByPath(nextObject, remainingPath);
 		}
