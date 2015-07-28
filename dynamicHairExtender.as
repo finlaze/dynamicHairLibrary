@@ -467,8 +467,11 @@
 				// Establish an anchor.  By default, it's the canonical position of the zeroth segment -- but custom anchors are also allowed.
 				if ((hairModParameters.anchorSource as String) != null) {
 					dynamicHairRope.anchorSource = findObjectByPath(g, hairModParameters.anchorSource);
+					if (dynamicHairRope.anchorSource == null) { 
+						main.updateStatusCol("dynamicHairExtender Loading Error: anchorSource '" + hairModParameters.anchorSource + "' was not recognized.  If this is a custom prop, please ensure that it's on-stage before loading the Dynamic Hair object.", "#FF0000"); 
+					}
 					
-					if ((hairModParameters.hideAnchor as Boolean) == true) {
+					if (dynamicHairRope.anchorSource && (hairModParameters.hideAnchor as Boolean) == true) {
 						(dynamicHairRope.anchorSource as DisplayObject).visible = false;
 					}
 				}
